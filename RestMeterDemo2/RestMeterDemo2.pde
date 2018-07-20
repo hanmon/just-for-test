@@ -100,26 +100,26 @@ void draw(){
   }
     
    if(millis()-timeStamp>5000){
-     //for(String sid:sensorId){
+     for(String sid:sensorId){
           try{
-            //URL url=new URL(baseURL+"/v1/device/" +deviceId + "/sensor/"+ sid + "/rawdata");
-            URL url=new URL(baseURL+"/v1/device/" +deviceId + "/sensor/"+ "instantaneous_kva" + "/rawdata?"+"start="+startTime+"&end="+endTime);
-            //Thread readThread=new Thread(new RestReadTask(url));
+            URL url=new URL(baseURL+"/v1/device/" +deviceId + "/sensor/"+ sid + "/rawdata");
+            //URL url=new URL(baseURL+"/v1/device/" +deviceId + "/sensor/"+ "instantaneous_kva" + "/rawdata?"+"start="+startTime+"&end="+endTime);
+            Thread readThread=new Thread(new RestReadTask(url));
             println("URL:"+url);
-            Thread readThread=new Thread(new RestReadIntervalTask(url,startTime,endTime));
+            //Thread readThread=new Thread(new RestReadIntervalTask(url,startTime,endTime));
             readThread.setName("instantaneous_kva");
             //readThread.setName(sid);
             readThread.start();
           }
           catch(Exception e){
           }
-     // }
+      }
      timeStamp=millis();
    }
    else if(millis()-timeStamp<0){
      timeStamp=millis();
    }
-   renderLineChart(singleSensorArray,startTime,endTime);
+   //renderLineChart(singleSensorArray,startTime,endTime);
 }
 
 
