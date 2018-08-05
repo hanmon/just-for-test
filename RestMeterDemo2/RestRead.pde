@@ -1,4 +1,10 @@
 ArrayList<SensorData> singleSensorArray=new ArrayList();
+ArrayList<SensorData> renderSensorArray=null;
+int sensorArraySize=0;
+int showSize=50;
+float[] xValues=new float[1000];
+float[] yValues=new float[1000];
+boolean refreshFlag=false;
 //Read Sensor Data
 String restReadSensorData(URL url) {
   String res=new String();
@@ -18,7 +24,7 @@ String restReadSensorData(URL url) {
   catch(Exception e) {
     e.toString();
   }
-  println("res:"+res);
+  //println("res:"+res);
 
   return res;
 }
@@ -87,11 +93,11 @@ public class RestReadIntervalTask implements Runnable {
       try {
         jsonArray=parseJSONArray(m);
         if (jsonArray!=null) {
-          println("JSON MESSAGE:"+jsonArray.toString());
+          //println("JSON MESSAGE:"+jsonArray.toString());
           singleSensorArray.clear();
           for (int i=0; i<jsonArray.size(); i++) {
             JSONObject jsonObject=jsonArray.getJSONObject(i);
-            println("JSONObject "+i+jsonObject.toString());
+            //   println("JSONObject "+i+jsonObject.toString());
             println(jsonObject.getString("id"));
             println(jsonObject.getString("time"));
             println(jsonObject.getJSONArray("value").get(0).toString());
@@ -107,6 +113,8 @@ public class RestReadIntervalTask implements Runnable {
             println("Value of Sensors"+i+"="+sd.value);
             i++;
           }
+          sensorArraySize=singleSensorArray.size();
+          refreshFlag=true;
         }
       }
       catch(Exception e) {
@@ -125,9 +133,12 @@ public class RestReadIntervalTask implements Runnable {
 
 
 void renderLineChart(ArrayList<SensorData> sdList, String startTime, String endTime) {
-  float xValue=0,xMinValue=0, xMaxValue=0, yMinValue=0, yMaxValue=0;
+  long xValue=0, xMinValue=0, xMaxValue=0;
+  float  yMinValue=0, yMaxValue=0;
   int basePosX=width/8, basePosY=height*2/5;
   int xAxisLength=width*3/4, yAxisLength=width*1/3;
+  int sdListSize=sdList.size();
+
 
   SimpleDateFormat sdfStart = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
   SimpleDateFormat sdfEnd = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -137,7 +148,7 @@ void renderLineChart(ArrayList<SensorData> sdList, String startTime, String endT
     Date dEnd=sdfEnd.parse(endTime);
     xMinValue=dStart.getTime();
     xMaxValue=dEnd.getTime();
-    
+
     //println("dStart"+dStart.toGMTString());
     //println("dEnd"+dEnd.toGMTString());
     //println("xMinValue"+xMinValue);
@@ -151,51 +162,99 @@ void renderLineChart(ArrayList<SensorData> sdList, String startTime, String endT
   stroke(255);
   line(basePosX, basePosY, basePosX, basePosY+yAxisLength);
   line(basePosX, basePosY+yAxisLength, basePosX+xAxisLength, basePosY+yAxisLength);
-  if (sdList.size()!=0) {
+  if (refreshFlag==true) {
+    //if (refreshFlag==true) {
     //SensorData sd1=Collections.max(singleSensorArray);
     //SensorData sd2=Collections.min(singleSensorArray);
     //yMinValue=parseFloat(sd1.value.toString());
     //yMaxValue=parseFloat(sd2.value.toString());
-    println("sdList.size()="+sdList.size());
-    noFill();
-    stroke(204, 51, 0);
-    beginShape();
-    println("yMinValue,yMaxValue:"+yMinValue+","+yMaxValue);
+    //println("sdList.size()="+sdList.size());
+
+    //println("xMinValue,xMaxValue:"+xMinValue+","+xMaxValue);
+
+
     for (int i=0; i<sdList.size(); i++) {
 
       SensorData sd=(SensorData)sdList.get(i);
-      
-      try{
+
+      try {
         Date dPresent=sdfPresent.parse(sd.time.toString());
         //println("sd.time.toString()"+sd.time.toString());
-        xValue=dPresent.getTime();
+        xValues[i]=dPresent.getTime();
+        yValues[i]=parseFloat(sd.value.toString());
         //println("xValue:"+xValue);
         //println("diff:"+(xValue-xMinValue));
       }
-      catch(Exception e){
+      catch(Exception e) {
         e.toString();
       }
-      
-      float x=basePosX+map(xValue, xMinValue, xMaxValue, 0, xAxisLength);
-      float y=basePosY+yAxisLength-map(parseFloat(sd.value.toString()), -1000, 1000, 0, yAxisLength);
+
+      //float x=basePosX+map(xValue, xMinValue, xMaxValue, 0, xAxisLength);
+      //println("xValue:"+xValue);
+      //println("diff:"+(xValue-xMinValue));
+      //println("Timestamp:"+map(xValue/1000, xMinValue/1000, xMaxValue/1000, 0, 1));
+      //println("Sensor value:"+sd.value.toString());
+
+      //println("y mapping result:"+map(parseFloat(sd.value.toString()),0, 714, 0, yAxisLength));
+    }
+    refreshFlag=false;
+  }
+  noFill();
+  stroke(204, 51, 0);
+  beginShape();
+  if (xValues.length>0) {
+    int size=min(showSize, sensorArraySize);
+    for (int i=0; i<size; i++) {
+      float x=basePosX+map(size-i, 0, size, 0, xAxisLength);
+      float y=basePosY+yAxisLength-map(yValues[sensorArraySize-i-1], min(yValues), max(yValues), 0, yAxisLength);
+      textAlign(RIGHT);
+      textSize(18);
+      text(int(max(yValues)), basePosX-xAxisLength/40, basePosY);
+      text(int(min(yValues)), basePosX-xAxisLength/40, basePosY+yAxisLength);
+
+      //  rotate(-QUARTER_PI);
+      //text(startTime,basePosX-xAxisLength/40,basePosY+yAxisLength);
+      //text(endTime,basePosX+xAxisLength,basePosY+yAxisLength);
+      //println("xValues[i],yValues[i]:"+xValues[i]+","+yValues[i]);
+      //print("sensorArraySize:"+sensorArraySize+",");
+      //   rotate(QUARTER_PI);
       vertex(x, y);
+      stroke(255, 0, 192);
+      ellipse(x, y, 3, 3);
+      stroke(204, 51, 0);
     }
     endShape();
   }
+  textAlign(RIGHT);
+  textSize(12);
+  pushMatrix();
+  translate(basePosX-xAxisLength/40, basePosY+yAxisLength*1.05);
+  rotate(-QUARTER_PI/2);
+  text(startTime, 0, 0);
+  popMatrix();
+  pushMatrix();
+  translate(basePosX+xAxisLength, basePosY+yAxisLength*1.05);
+  rotate(-QUARTER_PI/2);
+  text(endTime, 0, 0);
+  //text(startTime,basePosX-xAxisLength/40,basePosY+yAxisLength);
+  //translate(basePosX+xAxisLength,basePosY+yAxisLength);
+  
+  //rotate(QUARTER_PI);
+  popMatrix();
+  textSize(25);
 }
 
-float timeToNumeric(String timeStr){
+float timeToNumeric(String timeStr) {
   SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
   Date d=null;
-  try{
+  try {
     d=sdf.parse(timeStr);
   }
-  catch (Exception e){
+  catch (Exception e) {
     e.toString();
   }
-  if (d!=null){
-   return d.getTime(); 
-  }
-  else
+  if (d!=null) {
+    return d.getTime();
+  } else
     return 0;
 }
